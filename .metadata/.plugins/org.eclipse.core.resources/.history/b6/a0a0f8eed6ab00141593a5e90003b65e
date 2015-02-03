@@ -1,0 +1,19 @@
+import java.net.*;
+import java.io.*;
+
+public class TCPClient {
+	public static void main(String[] args) throws IOException{
+		if((args.length < 2)||(args.length > 3)){
+			throw new IllegalArgumentException("Parameters: <server> <word> [<port>]");
+		}
+		
+		String server = args[0];
+		byte[] byteBuffer = args[1].getBytes();
+		
+		int serverPort = (args.length == 3) ? Integer.parseInt(args[2]): 7;
+		
+		Socket socket = new Socket(server, serverPort);
+		System.out.println("Connected to Server... Sending Echo Request");
+		
+	}
+}

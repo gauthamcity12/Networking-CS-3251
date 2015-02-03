@@ -1,0 +1,39 @@
+import java.net.*;
+import java.io.*;
+
+public class TCPServer {
+	
+	private static final int BUFSIZE = 32;
+	public static void main(String[] args) throws IOException{
+		if(args.length != 1){
+			throw new IllegalArgumentException("Parameters:[<port>]");
+		}
+		
+		
+		int serverPort = Integer.parseInt(args[0]);
+		
+		ServerSocket servSocket = new ServerSocket(serverPort);
+		
+		int recvMessageSize;
+		byte[] byteBuffer = new byte[BUFSIZE];
+		
+		InputStream in = socket.getInputStream();
+		OutputStream out = socket.getOutputStream();
+		
+		out.write(byteBuffer); // sends encoded string to server
+		
+		int totalBytesRcvd = 0;
+		int bytesRcvd = 0;
+		while(totalBytesRcvd < byteBuffer.length){
+			if((bytesRcvd = in.read(byteBuffer, totalBytesRcvd, byteBuffer.length - totalBytesRcvd)) == -1){
+				throw new SocketException("Connection closed prematurely");
+			}
+			totalBytesRcvd += bytesRcvd;
+			
+		}
+		System.out.println("Received:"+new String(byteBuffer));
+		socket.close();
+		
+		
+	}
+}
