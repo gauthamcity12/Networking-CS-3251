@@ -1,0 +1,45 @@
+import java.net.*;
+import java.io.*;
+
+public class TCPClient {
+	public static void main(String[] args) throws IOException{
+		if((args.length < 3)||(args.length > 3)){
+			throw new IllegalArgumentException("Parameters: <server:[port]> <username> <password>");
+		}
+		
+		String[] params = args[0].split(":");
+		String server = params[0];
+		
+		//byte[] byteBuffer = args[1].getBytes();
+		byte[] user = args[1].getBytes();
+		byte[] pass = args[2].getBytes();
+		
+		byte[] welcome = "Welcome to our service.".getBytes();
+		
+		//int serverPort = (args.length == 3) ? Integer.parseInt(params[1]): 7;
+		int serverPort = Integer.parseInt(params[1]);
+		
+		Socket socket = new Socket(server, serverPort);
+		System.out.println("Connected to Server... Sending Echo Request");
+		
+		InputStream in = socket.getInputStream();
+		OutputStream out = socket.getOutputStream();
+		
+		out.write(user); // sends encoded string to server
+		out.write(pass);
+		
+		int totalBytesRcvd = 0;
+		int bytesRcvd = 0;
+		while(totalBytesRcvd < welcome.length){
+			if((bytesRcvd = in.read(welcome, totalBytesRcvd, welcome.length - totalBytesRcvd)) == -1){
+				throw new SocketException("Connection closed prematurely");
+			}
+			totalBytesRcvd += bytesRcvd;
+			
+		}
+		System.out.println("Received:"+new String(welcome));
+		socket.close();
+		
+		
+	}
+}

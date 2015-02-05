@@ -5,17 +5,7 @@ public class TCPClient {
 	static byte[] user;
 	static byte[] pass;
 	static Socket socket;
-	
-	
-	public static void connRequest(byte[] user, byte[] pass, String server, int serverPort) throws IOException{
-		socket = new Socket(server, serverPort);
-		System.out.println("Connected to Server... Sending Echo Request");
-		
-		InputStream in = socket.getInputStream();
-		OutputStream out = socket.getOutputStream();
-		
-		out.write(user); // sends encoded string to server
-		out.write(pass);
+	public void ConnRequestion(byte[] user, byte[] pass){
 		
 	}
 	public static void main(String[] args) throws IOException{
@@ -30,10 +20,22 @@ public class TCPClient {
 		user = args[1].getBytes();
 		pass = args[2].getBytes();
 		
+		
+		//int serverPort = (args.length == 3) ? Integer.parseInt(params[1]): 7;
 		int serverPort = Integer.parseInt(params[1]);
 		
-		connRequest(user, pass, server, serverPort);
-	
+		socket = new Socket(server, serverPort);
+		System.out.println("Connected to Server... Sending Echo Request");
+		
+		InputStream in = socket.getInputStream();
+		OutputStream out = socket.getOutputStream();
+		
+		out.write(user); // sends encoded string to server
+		out.write(pass);
+		
+		int totalBytesRcvd = 0;
+		int bytesRcvd = 0;
+
 		socket.close();
 		
 		

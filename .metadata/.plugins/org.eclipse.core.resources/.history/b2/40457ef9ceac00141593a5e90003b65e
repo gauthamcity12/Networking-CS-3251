@@ -4,7 +4,7 @@ import java.io.*;
 
 public class TCPServer {
 	
-	private static HashMap<String, String> map = new HashMap<String, String>();
+	private static HashMap map = new HashMap();
 	private static final int BUFSIZE = 32;
 	
 	
@@ -53,6 +53,7 @@ public class TCPServer {
 //			out.write(welcome.getBytes());
 			clientSocket.close();
 		}
+		
 		
 	}
 }

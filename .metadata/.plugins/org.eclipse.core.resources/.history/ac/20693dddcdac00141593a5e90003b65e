@@ -1,22 +1,13 @@
 import java.net.*;
-import java.util.HashMap;
 import java.io.*;
 
 public class TCPServer {
 	
-	private static HashMap<String, String> map = new HashMap<String, String>();
 	private static final int BUFSIZE = 32;
-	
-	
 	public static void main(String[] args) throws IOException{
 		if(args.length != 1){
 			throw new IllegalArgumentException("Parameters:[<port>]");
 		}
-		
-		// 3 users
-		map.put("User", "Pass");
-		map.put("George", "Burdell");
-		map.put("GT", "2015");
 		
 		
 		int serverPort = Integer.parseInt(args[0]);
@@ -43,7 +34,7 @@ public class TCPServer {
 			in.read(byteBuffer);
 			String user = new String(byteBuffer);
 			System.out.println(user);
-			//in.read(byteBuffer);
+			in.read(byteBuffer);
 			String pass = new String(byteBuffer);
 			System.out.println(pass);
 //			if(user.equals("user") && pass.equals("pass")){
@@ -53,6 +44,7 @@ public class TCPServer {
 //			out.write(welcome.getBytes());
 			clientSocket.close();
 		}
+		
 		
 	}
 }

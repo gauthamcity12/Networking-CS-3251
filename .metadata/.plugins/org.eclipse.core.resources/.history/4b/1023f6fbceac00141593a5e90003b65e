@@ -54,5 +54,8 @@ public class TCPServer {
 			clientSocket.close();
 		}
 		
+		servSocket.close();
+		
+		
 	}
 }

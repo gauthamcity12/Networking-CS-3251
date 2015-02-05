@@ -33,7 +33,8 @@ public class TCPClient {
 		int serverPort = Integer.parseInt(params[1]);
 		
 		connRequest(user, pass, server, serverPort);
-	
+		
+
 		socket.close();
 		
 		

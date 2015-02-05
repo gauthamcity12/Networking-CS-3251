@@ -7,7 +7,7 @@ public class TCPClient {
 	static Socket socket;
 	
 	
-	public static void connRequest(byte[] user, byte[] pass, String server, int serverPort) throws IOException{
+	public void ConnRequestion(byte[] user, byte[] pass, String server, int serverPort) throws IOException{
 		socket = new Socket(server, serverPort);
 		System.out.println("Connected to Server... Sending Echo Request");
 		
@@ -30,10 +30,10 @@ public class TCPClient {
 		user = args[1].getBytes();
 		pass = args[2].getBytes();
 		
+		
 		int serverPort = Integer.parseInt(params[1]);
 		
-		connRequest(user, pass, server, serverPort);
-	
+
 		socket.close();
 		
 		
