@@ -1,0 +1,140 @@
+import java.net.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Random;
+import java.io.*;
+
+public class TCPServer {
+	
+	private static HashMap<String, String> map = new HashMap<String, String>();
+	private static final int BUFSIZE = 64;
+	
+	public static String nonceCreation(){
+		Random ran = new Random();
+		int size = 63;
+		char data = ' ';
+		String nonce = "";
+
+		for (int i=0; i<=size; i++) {
+		  data = (char)(ran.nextInt(25)+97);
+		  nonce = data + nonce;
+		}
+
+		System.out.println("Nonce:" + nonce);
+		return nonce;
+	}
+	
+	public static byte[] MD5(String user, String password, String nonce) throws NoSuchAlgorithmException, UnsupportedEncodingException{
+		String concat = user+password+nonce;
+		byte[] theTextToDigestAsBytes = concat.getBytes("UTF-8");
+		MessageDigest md= MessageDigest.getInstance("MD5");
+		md.update(theTextToDigestAsBytes);
+		byte[] digest= md.digest();
+		return digest;
+	}
+	
+	public static void main(String[] args) throws IOException{
+		try{
+			if(args.length != 1){
+				throw new IllegalArgumentException("Parameters:[<port>]");
+			}
+		}
+		catch(IllegalArgumentException e){
+			System.out.println("Error: Parameters:[<port>], Please try again");
+			System.exit(0);
+		}
+		
+		// 3 users
+		map.put("user", "pass");
+		map.put("George", "Burdell");
+		map.put("GT", "2015");
+		
+		
+		int serverPort = Integer.parseInt(args[0]);
+		ServerSocket servSocket = null;
+		try{
+			servSocket = new ServerSocket(serverPort);
+		}
+		catch(Exception e){
+			System.out.println("Problem opening Server Socket to port:"+serverPort);
+			System.out.println(e);
+			System.exit(0);
+		}
+		System.out.println("Started new server");
+		
+		int recvMessageSize;
+		byte[] byteBuffer = new byte[BUFSIZE];
+		
+		for(;;){
+			System.out.println("Blocking");
+			Socket clientSocket = servSocket.accept();
+			System.out.println("Handling client at "+clientSocket.getInetAddress()+" on port "+clientSocket.getPort());
+			
+			InputStream in = null;
+			OutputStream out = null;
+			
+			try{
+				in = clientSocket.getInputStream();
+				out = clientSocket.getOutputStream();
+			}
+			catch(Exception e){
+				System.out.println("Problem opening I/O Stream for client allocated socket");
+				System.out.println(e);
+				System.exit(0);
+			}
+
+			String welcome = "Welcome to our service.";
+			
+			// AUTHENTICATION REQUEST RECEIVED HERE
+			in.read(byteBuffer, 0 ,1);
+			String input = new String(byteBuffer).substring(0,1);
+			if(!input.equals("Y")){
+				out.write("Access to Server Denied".getBytes());
+				System.out.println("Improper Authorization Request: Closing Connection with Client");
+				clientSocket.close();
+				continue;
+			}
+			System.out.println("Y:" + input);
+			
+			/// Send cryptographic nonce
+			String nonce = nonceCreation();
+			out.write(nonce.getBytes());
+			
+			/// Received Username & Hash
+			byteBuffer = new byte[BUFSIZE];
+			in.read(byteBuffer);
+			
+			String userHash = new String(byteBuffer);
+			int index = userHash.charAt('*');
+			userHash = userHash.substring(0,index+32);
+			System.out.println("User & Hash:"+userHash);
+			
+			String user = "";
+			String hash = "";
+			for(int i =0; i < userHash.length(); i++){
+				if(userHash.charAt(i) == '*'){
+					user = userHash.substring(0, i);
+					hash = userHash.substring(i+1);
+					break;
+				}
+			}
+			System.out.println("User:"+user+"----"+"Hash:"+hash);
+			
+			byte[] test = null;
+			try {
+				test = MD5(user, map.get(user), nonce);
+			} catch (NoSuchAlgorithmException e) {
+				System.out.println("Algorithm Exception: Problem computing the hash, exiting the program");
+				System.exit(0);
+			}
+			//System.out.println("Test:"+new String(test));
+			//System.out.println("Hash:"+hash);
+			if((new String(test).trim()).equals(hash.trim())){
+				System.out.println("true");
+			}
+			clientSocket.close();
+		}
+		
+	}
+}
