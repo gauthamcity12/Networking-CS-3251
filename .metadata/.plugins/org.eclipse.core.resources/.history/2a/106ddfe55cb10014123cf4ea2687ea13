@@ -1,0 +1,186 @@
+import java.net.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Random;
+import java.io.*;
+
+public class serverUDP {
+	private static final int MAX = 255;
+	private static DatagramSocket socket = null;
+	private static DatagramPacket packet = null;
+	private static HashMap<String, String> map = new HashMap<String, String>();
+	private static HashMap<String, connStatus> connections = new HashMap<String, connStatus>();
+	private static DatagramPacket sendPacket = null;
+	
+	/**
+	 * Test MD5 digest computation
+	 * !!! Borrowed code from link provided in assignment description !!!
+	 * @author Roedy Green
+	 * @version 1.0
+	 * @since 2004-06-07
+	 */
+	public static byte[] MD5(String user, String pass, String nonce) throws NoSuchAlgorithmException, UnsupportedEncodingException{
+		String concat = user+pass+nonce;
+		byte[] theTextToDigestAsBytes = concat.getBytes("UTF-8");
+		MessageDigest md= MessageDigest.getInstance("MD5");
+		md.update(theTextToDigestAsBytes);
+		byte[] digest= md.digest();
+		return digest;
+	}
+	
+	/**
+	 * Creates a cryptographic string to be sent to client to compute the MD5 hash
+	 * @return String returns cryptographic nonce
+	 */
+	public static String nonceCreation(){
+		Random rand = new Random();
+		int size = 63;
+		char data = ' ';
+		String nonce = "";
+
+		for (int i=0; i<=size; i++) {
+		  data = (char)(rand.nextInt(25)+97);
+		  nonce = data + nonce;
+		}
+
+		return nonce;
+	}
+	
+	public static void main(String[] args){
+		serverUDP UDP = new serverUDP();
+		/**
+		 * Sets up the hashmap of the three predefined users that will be refernced later to verify the user
+		 */
+		map.put("user", "pass");
+		map.put("George", "Burdell");
+		map.put("GT", "2015");
+		
+		try{
+			if (args.length != 1){
+				throw new IllegalArgumentException("Parameter(s) : <Port>");
+			}
+		}
+		catch(IllegalArgumentException e){
+			System.out.println(e);
+			System.exit(0);
+		}
+		
+		int serverPort = Integer.parseInt(args[0]);
+		try {
+			socket = new DatagramSocket(serverPort);
+			packet = new DatagramPacket(new byte[MAX], MAX);
+		} catch (SocketException e) {
+			System.out.println(e);
+			System.exit(0);
+		}
+		
+		String data = "";
+		for(;;){
+			System.out.println("Waiting for client");
+			try {
+				socket.receive(packet);
+				InetAddress addr = packet.getAddress();
+				data = new String(packet.getData());
+				System.out.println("Handling client at " +packet.getAddress().getHostAddress() +" onport "+packet.getPort());
+				if(data.trim().equals("Y") && !connections.containsKey(addr)){
+					connections.put(addr.getHostAddress(), UDP.new connStatus(addr));
+					data = nonceCreation();
+					connections.get(addr.getHostAddress()).setNonce(data);
+					connections.get(addr.getHostAddress()).setAuth();
+				}
+				else if(connections.containsKey(addr) && connections.get(addr.getHostAddress()).getAuth()){
+					//
+					connections.get(addr.getHostAddress()).setHash();
+					String test = testUserHash(packet.getData(), )
+				}
+				else{
+					data = "Access to Server Denied";
+					System.out.println("Improper Authorization Request: Closing Connection with Client");
+				}
+				
+				sendPacket = new DatagramPacket(data.getBytes("UTF-8"), data.length(), packet.getAddress(), packet.getPort());
+				socket.send(sendPacket);
+				packet.setLength(MAX); 
+			} catch (IOException e) {
+				System.out.println(e);
+				System.exit(0);
+			}
+		}
+	}
+	public static String testUserHash(byte[] data, String nonce, String address){
+		String userHash = new String(data).trim();
+		String user = "";
+		String hash = "";
+		connStatus con = connections.get(address);
+		
+		for(int i =0; i < userHash.length(); i++){
+			if(userHash.charAt(i) == '*'){
+				user = userHash.substring(0, i);
+				con.setUser(user);
+				hash = userHash.substring(i+1);
+				break;
+			}
+		}
+		
+		byte[] test = null;
+		try {
+			test = MD5(user, map.get(user), nonce);
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println("Algorithm Exception: Problem computing the hash, exiting the program");
+			System.exit(0);
+		} catch (UnsupportedEncodingException e) {
+			System.out.println(e);
+			System.exit(0);
+		}
+		return new String(test).trim();
+	}
+	
+	private class connStatus{
+		private String user = "";
+		private boolean rcvAuth = false;
+		private boolean rcvHash = false;
+		private InetAddress hostAddress = null;
+		private String nonce = "";
+		
+		public connStatus(InetAddress addr){
+			this.hostAddress = addr;
+		}
+		
+		public void setUser(String user){
+			this.user = user;
+		}
+		
+		public void setAuth(){
+			rcvAuth = true;
+		}
+		
+		public void setHash(){
+			rcvHash = true;
+		}
+		
+		public String getUser(){
+			return user;
+		}
+		
+		public InetAddress getAddress(){
+			return hostAddress;
+		}
+		
+		public boolean getAuth(){
+			return rcvAuth;
+		}
+		
+		public boolean getHash(){
+			return rcvHash;
+		}
+		
+		public void setNonce(String n){
+			nonce = n;
+		}
+		
+		public String getNonce(){
+			return nonce;
+		}
+	}
+}

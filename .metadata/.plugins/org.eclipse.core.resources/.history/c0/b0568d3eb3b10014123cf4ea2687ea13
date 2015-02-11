@@ -1,0 +1,184 @@
+import java.net.*;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.io.*;
+
+public class letmeinUDP {
+	private static final int TIMEOUT = 3000; // TIMEOUT in 3 seconds
+	private static final int MAXTRIES = 5;
+	private static DatagramSocket socket = null;
+	private static InetAddress serverAddress = null;
+	private static byte[] user = null;
+	private static byte[] pass = null;
+	private static String debug = "";
+	private static boolean dPrint = false;
+	private static DatagramPacket sendPacket = null;
+	private static DatagramPacket rcvPacket = null;
+	private static final int MAX = 255;
+	private static int serverPort;
+	
+	public static DatagramPacket challengeResponse(byte[] hash){
+		String auth = new String(user)+"*"+new String(hash);
+		DatagramPacket result = null;
+		try {
+			result = sendrecv(auth.getBytes("UTF-8"), serverAddress, serverPort, socket);
+		} catch (UnsupportedEncodingException e) {
+			System.out.println(e);
+			System.exit(0);
+		}
+		return result;
+	}
+	public static DatagramPacket authReq(String auth){
+		DatagramPacket result = null;
+		try {
+			result = sendrecv(auth.getBytes("UTF-8"), serverAddress, serverPort, socket);
+		} catch (UnsupportedEncodingException e) {
+			System.out.println(e);
+			System.exit(0);
+		}
+		System.out.println("Sending authentication requestion to server:"+serverAddress+":"+serverPort);
+		return result;
+	}
+	
+	public static DatagramPacket sendrecv(byte[] data, InetAddress serverAdd, int serverPort, DatagramSocket socket){
+		sendPacket = new DatagramPacket(data, data.length, serverAddress, serverPort);
+		rcvPacket = new DatagramPacket(new byte[MAX], MAX);
+		
+		int tries = 0;
+		boolean gotResponse = false;
+		
+		do{
+			try{
+				socket.send(sendPacket);
+				socket.receive(rcvPacket);
+				if (!rcvPacket.getAddress().equals(serverAddress)) {
+					throw new IOException("Received packet from an unknown source");
+				}
+				gotResponse = true;
+			}
+			catch(InterruptedIOException e){
+				tries += 1;
+				System.out.println("Timed out, " + (MAXTRIES - tries) + " more tries...") ;
+			}
+			catch(Exception e){
+				System.out.println(e);
+				System.exit(0);
+			}
+		}	while((!gotResponse) && tries < MAXTRIES);
+		
+		if(gotResponse){
+			System.out.println("Received: " + new String(rcvPacket.getData()));
+			return rcvPacket;
+		}
+		else{
+			System. out.println("No response -- giving up.");
+			System.exit(0);
+			return null;
+		}
+	}
+	
+	/**
+	 * Test MD5 digest computation
+	 * !!! Borrowed code from link provided in assignment description !!!
+	 * @author Roedy Green
+	 * @version 1.0
+	 * @since 2004-06-07
+	 */
+	public static byte[] MD5(String user, String password, String nonce) throws NoSuchAlgorithmException, UnsupportedEncodingException{
+		String concat = user+password+nonce;
+		byte[] theTextToDigestAsBytes = concat.getBytes("8859_1");
+		MessageDigest md= MessageDigest.getInstance("MD5");
+		md.update(theTextToDigestAsBytes);
+		byte[] digest= md.digest();
+		return digest;
+	}
+	
+	public static void main(String[] args){
+		try{	
+			if((args.length < 3)||(args.length > 4)){
+				throw new IllegalArgumentException("Parameters: <server:[port]> <username> <password> <-d(optional)>");
+			}
+			CharSequence ast = "*";
+			if(args[1].contains(ast)){
+				throw new Exception("Username cannot contain *");
+			}
+		}
+		catch(IllegalArgumentException e){
+			System.out.println("Error: Invalid Parameters: <server:[port]> <username> <password> <-d(optional)>, Please try again");
+			System.exit(0);
+		} 
+		catch(Exception e) {
+			System.out.println(e);
+			System.exit(0);
+		}
+		
+		/**
+		 * Parses command line arguments after confirming that the input is valid. 
+		 */
+		String[] params = args[0].split(":");
+		serverPort = 7; // Default port number
+		try{
+			serverPort = Integer.parseInt(params[1]);
+		}
+		catch(Exception e){
+			System.out.println("Invalid Argument: Must Include ':' between Server & Port #. Please try again.");
+			System.exit(0);
+		}
+		
+		try {
+			serverAddress = InetAddress.getByName(params[0]);
+			user = args[1].getBytes("UTF-8");
+			pass = args[2].getBytes("UTF-8");
+		} catch (UnsupportedEncodingException e1) {
+			System.out.println(e1);
+			System.exit(0);
+		} catch (UnknownHostException e) {
+			System.out.println(e);
+			System.exit(0);
+		} 
+		
+		if(args.length == 4){
+			debug = args[3];
+			if(debug.charAt(1)=='d' && debug.charAt(0)=='-' && debug.length()==2){
+				dPrint = true;
+			}
+			else{
+				System.out.println("Invalid debug parameter, please try again");
+				System.out.println("Exiting...");
+				System.exit(0);
+			}
+		}
+		
+		//
+		try {
+			socket = new DatagramSocket();
+			socket.setSoTimeout(TIMEOUT); 
+		} catch (SocketException e) {
+			System.out.println(e);
+			System.exit(0);
+		}
+		
+		DatagramPacket result = authReq("Y");
+		
+		/**
+		 * Creates the MD5 hash based on the username, password, and cryptographic nonce
+		 */
+		byte[] hash = null;
+		try {
+			System.out.println("User:"+new String(user));
+			System.out.println("Pass:"+new String(pass));
+			System.out.println("Nonce:"+new String(result.getData()));
+			hash = MD5(new String(user).trim(), new String(pass).trim(), new String(result.getData()).trim());
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println("Algorithm Exception: Problem computing the hash, exiting the program");
+			System.exit(0);
+		} catch (UnsupportedEncodingException e) {
+			System.out.println(e);
+			System.exit(0);
+		}
+		System.out.println("Hash:"+new String(hash));
+		result = challengeResponse(hash);
+		socket.close();
+		
+	}
+}
